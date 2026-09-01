@@ -28,7 +28,7 @@ export async function runExplore(projectId: string) {
     try {
       const pools = await Promise.all(plan.searchQueries.slice(0, 3).map((q) => provider.search(q, 10)));
       const deduped = Array.from(new Map(pools.flat().map((img) => [`${img.provider}:${img.providerId}`, img])).values());
-      const selected = selectRepresentativeFour(deduped);
+      const selected = await selectRepresentativeFour(deduped, plan);
 
       await prisma.searchImage.deleteMany({ where: { directionId: direction.id } });
       await prisma.searchImage.createMany({
@@ -46,6 +46,7 @@ export async function runExplore(projectId: string) {
       });
       await prisma.direction.update({ where: { id: direction.id }, data: { status: "ready" } });
     } catch (error) {
+      console.error(`SCOUT direction ${plan.order} failed`, error);
       await prisma.direction.update({ where: { id: direction.id }, data: { status: "failed" } });
     }
   }
