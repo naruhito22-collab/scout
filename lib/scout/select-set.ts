@@ -1,9 +1,9 @@
 import type { DirectionPlan, NormalizedSearchImage } from "@/lib/types";
-import { evaluateAndSelectFour } from "@/lib/providers/image-evaluator";
+import { evaluateAndSelectRepresentativeSet } from "@/lib/providers/image-evaluator";
 
-export async function selectRepresentativeFour(
+export async function selectRepresentativeSet(
   images: NormalizedSearchImage[],
   direction: Pick<DirectionPlan, "title" | "description" | "searchQueries">
 ): Promise<NormalizedSearchImage[]> {
-  return evaluateAndSelectFour(direction, images);
+  return evaluateAndSelectRepresentativeSet(direction, images);
 }
