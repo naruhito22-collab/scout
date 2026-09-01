@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { planDirections } from "@/lib/providers/direction-planner";
 import { getPrimarySearchProvider } from "@/lib/providers/provider-factory";
-import { selectRepresentativeFour } from "./select-set";
+import { selectRepresentativeSet } from "./select-set";
 
 const prisma = new PrismaClient();
 
@@ -28,7 +28,7 @@ export async function runExplore(projectId: string) {
     try {
       const pools = await Promise.all(plan.searchQueries.slice(0, 3).map((q) => provider.search(q, 10)));
       const deduped = Array.from(new Map(pools.flat().map((img) => [`${img.provider}:${img.providerId}`, img])).values());
-      const selected = await selectRepresentativeFour(deduped, plan);
+      const selected = await selectRepresentativeSet(deduped, plan);
 
       await prisma.searchImage.deleteMany({ where: { directionId: direction.id } });
       await prisma.searchImage.createMany({
