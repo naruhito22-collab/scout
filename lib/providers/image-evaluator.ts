@@ -8,16 +8,23 @@ type DirectionContext = {
 };
 
 function fallbackSelect(images: NormalizedSearchImage[]): NormalizedSearchImage[] {
-  if (images.length <= 4) return images;
-  const indexes = [0, Math.floor(images.length * 0.28), Math.floor(images.length * 0.58), images.length - 1];
+  if (images.length <= 6) return images;
+  const indexes = [
+    0,
+    Math.floor(images.length * 0.2),
+    Math.floor(images.length * 0.4),
+    Math.floor(images.length * 0.6),
+    Math.floor(images.length * 0.8),
+    images.length - 1
+  ];
   return indexes.map((i) => images[i]).filter(Boolean);
 }
 
-export async function evaluateAndSelectFour(
+export async function evaluateAndSelectRepresentativeSet(
   context: DirectionContext,
   images: NormalizedSearchImage[]
 ): Promise<NormalizedSearchImage[]> {
-  if (images.length <= 4) return images;
+  if (images.length <= 6) return images;
 
   const model = process.env.OPENAI_VISION_MODEL;
   if (process.env.SCOUT_MODE !== "live" || !process.env.OPENAI_API_KEY || !model) {
@@ -25,7 +32,7 @@ export async function evaluateAndSelectFour(
   }
 
   // Keep Phase 1 latency/cost bounded. Search may return 20-30+ candidates per direction,
-  // but Vision only needs a representative shortlist to choose the first four tiles.
+  // but Vision only needs a representative shortlist to choose 4-6 useful references.
   const candidates = images.slice(0, 16);
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -55,7 +62,7 @@ export async function evaluateAndSelectFour(
       selectedIndexes: {
         type: "array",
         minItems: 4,
-        maxItems: 4,
+        maxItems: 6,
         items: { type: "integer", minimum: 0, maximum: candidates.length - 1 }
       }
     },
@@ -69,7 +76,8 @@ export async function evaluateAndSelectFour(
         `DIRECTION: ${context.title}`,
         `DESCRIPTION: ${context.description}`,
         `SEARCH QUERIES: ${context.searchQueries.join(" | ")}`,
-        "Choose four images that collectively explain this single visual direction at a glance."
+        "Choose 4 to 6 images that collectively explain this single visual direction at a glance.",
+        "Use only four when the direction is already clear. Add a fifth or sixth only when they contribute a genuinely different useful composition, space/material cue, or lighting/mood reference."
       ].join("\n")
     }
   ];
@@ -91,10 +99,11 @@ export async function evaluateAndSelectFour(
               text: [
                 "You are SCOUT's commercial visual-reference editor.",
                 "Evaluate stock-photo candidates as BACKGROUND REFERENCES, not as final licensed assets.",
-                "The selected four must be coherent as one direction while showing useful internal breadth.",
-                "Prefer: #1 anchor/hero, #2 composition variation, #3 material/space variation, #4 lighting/mood variation.",
+                "The selected set must be coherent as one direction while showing useful internal breadth.",
+                "Prefer: anchor/hero, composition variation, material/space variation, and lighting/mood variation.",
+                "Select 4-6 images. Prefer fewer images unless extra images add distinct decision-making value.",
                 "Penalize literal product shots, prominent people, irrelevant close-ups, text-heavy images, poor-quality images, and near-duplicates.",
-                "Do not select four nearly identical images even when they individually score well.",
+                "Do not fill the set with nearly identical images even when they individually score well.",
                 "Noise score: 1 means clean/useful; 5 means noisy or mismatched."
               ].join("\n")
             }
@@ -115,9 +124,9 @@ export async function evaluateAndSelectFour(
     const parsed = JSON.parse(response.output_text) as { selectedIndexes?: number[] };
     const selectedIndexes = Array.from(new Set(parsed.selectedIndexes ?? []))
       .filter((index) => Number.isInteger(index) && index >= 0 && index < candidates.length)
-      .slice(0, 4);
+      .slice(0, 6);
 
-    if (selectedIndexes.length !== 4) return fallbackSelect(candidates);
+    if (selectedIndexes.length < 4) return fallbackSelect(candidates);
     return selectedIndexes.map((index) => candidates[index]);
   } catch (error) {
     console.error("SCOUT Vision selection failed; using deterministic fallback", error);
