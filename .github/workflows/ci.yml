@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DATABASE_URL: file:./dev.db
+      SCOUT_MODE: mock
+      OPENAI_API_KEY: ""
+      OPENAI_DIRECTION_MODEL: ""
+      OPENAI_VISION_MODEL: ""
+      PEXELS_API_KEY: ""
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate Prisma client
+        run: npm run db:generate
+
+      - name: Initialize database
+        run: npm run db:push
+
+      - name: Build
+        run: npm run build
