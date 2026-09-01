@@ -6,7 +6,9 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
   try {
     const result = await runExplore(id);
     return NextResponse.json(result);
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message ?? "Explore failed" }, { status: 500 });
+  } catch (e: unknown) {
+    console.error(`SCOUT explore failed for project ${id}`, e);
+    const message = e instanceof Error ? e.message : "Explore failed";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
