@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id              String              @id @default(cuid())
+  title           String
+  originalRequest String
+  stage           String              @default("input")
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  references      UploadedReference[]
+  directions      Direction[]
+  aiRuns          AiRun[]
+}
+
+model UploadedReference {
+  id          String   @id @default(cuid())
+  projectId   String
+  imageUrl    String
+  userComment String?
+  createdAt   DateTime @default(now())
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Direction {
+  id               String        @id @default(cuid())
+  projectId        String
+  order            Int
+  title            String
+  shortDescription String
+  status           String        @default("pending")
+  querySetJson     String
+  createdAt        DateTime      @default(now())
+  project          Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  images           SearchImage[]
+
+  @@unique([projectId, order])
+}
+
+model SearchImage {
+  id           String    @id @default(cuid())
+  directionId  String
+  provider     String
+  providerId   String
+  sourceUrl    String
+  thumbnailUrl String
+  imageUrl     String
+  photographer String?
+  rank         Int
+  selected     Boolean   @default(false)
+  displayedAt  DateTime  @default(now())
+  direction    Direction @relation(fields: [directionId], references: [id], onDelete: Cascade)
+}
+
+model AiRun {
+  id            String   @id @default(cuid())
+  projectId     String
+  type          String
+  modelUsed     String
+  promptVersion String
+  status        String
+  retryCount    Int      @default(0)
+  inputJson     String
+  outputJson    String?
+  errorMessage  String?
+  createdAt     DateTime @default(now())
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
